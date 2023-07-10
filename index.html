@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
+<title>Whois Lookup</title>
+<script type="text/javascript">
+	var apiPath = "whois.php";
+	function printOutResult(title, content, index, hide) {
+		var cn = document.createElement("div");
+		var cnHead = document.createElement("header");
+		var cnTitle = document.createElement("span");
+		var cnTitleButton = document.createElement("span");
+		var cnBody = document.createElement("div");
+		var cnContent = document.createElement("pre");
+		cn.className = "w3-card w3-padding-16";
+		cnHead.className = "w3-container w3-aqua";
+		cnHead.style.paddingTop = "6px";
+		cnTitle.className = "w3-large";
+		cnTitleButton.className = "w3-button w3-circle w3-small w3-aqua w3-right";
+		cnBody.className = "w3-container";
+		cnBody.style.display = hide? "none": "block";
+		cnContent.style.whiteSpace = "pre-wrap";
+		cnContent.style.wordWrap = "break-word";
+		cnTitleButton.id = "b_" + index;
+		cnBody.id = "p_" + index;
+		cnTitle.appendChild(document.createTextNode(title));
+		cnTitleButton.appendChild(document.createTextNode(hide? "〉": "﹀"));
+		cnTitleButton.onclick = function() { changeShown(index); }
+		cnContent.appendChild(document.createTextNode(content));
+		cnHead.appendChild(cnTitle);
+		cnHead.appendChild(cnTitleButton);
+		cnBody.appendChild(cnContent);
+		cn.appendChild(cnHead);
+		cn.appendChild(cnBody);
+		document.getElementById("lookupResult").appendChild(cn);
+	}
+	function changeShown(blkName) {
+		var n = document.getElementById("p_" + blkName);
+		if (n.style.display == "none") {
+			n.style.display = "block";
+			document.getElementById("b_" + blkName).innerHTML = "﹀";
+		} else {
+			n.style.display = "none";
+			document.getElementById("b_" + blkName).innerHTML = "〉";
+		}
+	}
+	function lookup(domain, queryPath, nocache) {
+		var asyncHandle = new XMLHttpRequest();
+		var domre = new RegExp("(\\s|\\w:)" + domain.replace(".", "\\.") + "\\s", "i");
+		asyncHandle.onreadystatechange = function() {
+			if (asyncHandle.readyState == 4 && asyncHandle.status == 200) {
+				var data = JSON.parse(asyncHandle.responseText);
+				if (data.error !== null) {
+					printOutResult("Whois lookup failed", data.error, 0);
+					return;
+				}
+				var updateDate = new Date(data.result.time * 1000);
+				var timeOffset = Date.now() - updateDate;
+				var timeElement = document.getElementById("dataUpdateTime");
+				timeElement.innerHTML = "<span>Last update: " + updateDate.toString().replace(/ \(.+\).*/, "") + "</span><span class=\"w3-large\">&nbsp;</span>";
+				if (timeOffset > 3600000) timeElement.innerHTML += "<span class=\"w3-large\"><a href=\"#\" style=\"text-decoration:none\" onclick=\"wstart(true);\">↻</a></span>";
+				var hide = false;
+				for (var i = data.result.data.length - 1; i >= 0; i--) {
+					var title = (i === 0? "Registry": "Registrar") + " whois data from " + data.result.data[i].server;
+					if (!hide) {
+						if (domre.test(data.result.data[i].data)) {
+							hide = true;
+							printOutResult(title, data.result.data[i].data, i, false);
+							continue;
+						}
+						printOutResult("Unexceptd " + title, data.result.data[i].data, i, true);
+						continue;
+					}
+					printOutResult(title, data.result.data[i].data, i, hide);
+				}
+			}
+		}
+		asyncHandle.open("GET", queryPath + "?domain=" + domain + (nocache? "&nocache=1": ""), true);
+		asyncHandle.send();
+	}
+	function wstart(nocache) {
+		if (nocache !== true) nocache = false;
+		document.getElementById("lookupResult").innerHTML = "";
+		document.getElementById("dataUpdateTime").innerHTML = "";
+		lookup(document.getElementById("domain").value, apiPath, nocache);
+		return false;
+	}
+</script>
+</head>
+<body class="w3-container w3-padding-32">
+<div class="w3-card">
+	<header class="w3-container w3-green"><h3>Whois Lookup Tool</h3></header>
+	<form class="w3-container w3-padding-16" id="inputarea" onsubmit="return wstart();">
+		<div class="w3-row-padding">
+			<div class="w3-threequarter"><input type="text" class="w3-input" id="domain" placeHolder="google.com" /></div>
+			<div class="w3-quarter"><button type="submit" class="w3-button w3-blue">Lookup</button></div>
+		</div>
+	</form>
+	<footer class="w3-container w3-khaki" id="dataUpdateTime" style="padding-left:2em;padding-right:2em"></footer>
+</div>
+<div id="lookupResult"></div>
+</body>
+</html>
